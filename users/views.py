@@ -1,55 +1,76 @@
-# users/views.py
+# users/views.py - সম্পূর্ণ আপডেটেড ভার্সন (কোনো disabled attribute নেই)
 
 from django.shortcuts import render, redirect
-from django.http import HttpResponse
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
+from django.contrib.auth.models import User
 
 def login_view(request):
-    """Login page view"""
-    return HttpResponse("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Login - LinkedIn Lead Finder</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 50px; background: #f0f2f5; }
-            .login-box {
-                max-width: 400px;
-                margin: auto;
-                background: white;
-                padding: 30px;
-                border-radius: 10px;
-                box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            }
-            input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
-            button { background: #667eea; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
-        </style>
-    </head>
-    <body>
-        <div class="login-box">
-            <h2>🔐 Login</h2>
-            <p>Authentication system coming in Phase 10</p>
-            <form method="post">
-                <input type="text" placeholder="Username" disabled>
-                <input type="password" placeholder="Password" disabled>
-                <button disabled>Login (Coming Soon)</button>
-            </form>
-            <p><a href="/">← Back to Home</a></p>
-        </div>
-    </body>
-    </html>
-    """)
+    """
+    User login view - working version with enabled form fields
+    """
+    
+    # যদি ইতিমধ্যে logged in থাকে
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        # Authenticate user
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            messages.success(request, f'Welcome back, {username}!')
+            return redirect('dashboard')
+        else:
+            messages.error(request, 'Invalid username or password!')
+            return redirect('login')
+    
+    # GET request - show login form
+    return render(request, 'users/login.html')
 
 def logout_view(request):
-    """Logout view"""
-    return HttpResponse("Logged out! <a href='/'>Go Home</a>")
+    """User logout view"""
+    logout(request)
+    messages.info(request, 'You have been logged out successfully.')
+    return redirect('home')
 
 def register_view(request):
-    """Register page view"""
-    return HttpResponse("""
-    <h2>Register</h2>
-    <p>Registration system coming in Phase 10</p>
-    <a href="/">Back to Home</a>
-    """)
+    """User registration view"""
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password1 = request.POST.get('password1')
+        password2 = request.POST.get('password2')
+        
+        # Validation
+        if password1 != password2:
+            messages.error(request, 'Passwords do not match!')
+            return redirect('register')
+        
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists!')
+            return redirect('register')
+        
+        # Create user
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password1
+        )
+        user.save()
+        
+        messages.success(request, 'Account created successfully! Please login.')
+        return redirect('login')
+    
+    return render(request, 'users/register.html')
+
+def profile_view(request):
+    """User profile view - requires login"""
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    return render(request, 'users/profile.html', {'user': request.user})
