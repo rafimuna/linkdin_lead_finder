@@ -1,6 +1,15 @@
-Django==5.2.1
-psycopg2-binary==2.9.10
+# requirements.txt - Complete dependencies
+
+Django==5.0.6
+psycopg2-binary==2.9.9
+beautifulsoup4==4.12.3
 requests==2.32.3
-beautifulsoup4==4.13.4
-selenium==4.32.0
-python-dotenv==1.1.0
+selenium==4.20.0
+lxml==5.2.1
+pandas==2.2.2
+openpyxl==3.1.2
+python-decouple==3.8
+pillow==10.3.0
+whitenoise==6.6.0
+django-crispy-forms==2.1
+crispy-bootstrap5==2024.2
