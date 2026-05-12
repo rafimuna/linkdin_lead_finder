@@ -72,6 +72,15 @@
         .badge-manager { background: #a4b0be; color: white; }
         .badge-ceo { background: #8e44ad; color: white; }
         .badge-other { background: #747d8c; color: white; }
+        .btn-warning {
+            background: #ffc107;
+            border: none;
+            color: #333;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -79,7 +88,7 @@
     <nav class="navbar navbar-custom navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="#">
-                <i class="fas fa-linkedin"></i> AI LinkedIn Lead Finder
+                <i class="fab fa-linkedin"></i> AI LinkedIn Lead Finder
             </a>
             <div class="ms-auto">
                 <span class="text-white me-3">
@@ -167,6 +176,9 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5><i class="fas fa-users"></i> LinkedIn Profiles</h5>
                 <div>
+                    <a href="{% url 'manual_add' %}" class="btn btn-warning btn-sm me-2">
+                        <i class="fas fa-plus-circle"></i> Manual Add
+                    </a>
                     <a href="{% url 'search' %}" class="btn btn-primary-custom btn-primary btn-sm me-2">
                         <i class="fas fa-search"></i> New Search
                     </a>
