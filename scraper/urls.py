@@ -21,7 +21,7 @@ urlpatterns = [
     
     # ========== AI Features ==========
     path('reclassify/', views.reclassify_profiles, name='reclassify'),
-    path('classify-profile/<int:profile_id>/', views.classify_single_profile, name='classify_single'),
+    
     
     # ========== API Endpoints ==========
     path('api/search-status/', views.search_status, name='search_status'),
