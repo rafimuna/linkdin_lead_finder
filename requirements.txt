@@ -9,3 +9,4 @@ beautifulsoup4==4.12.3
 lxml==5.2.1
 django-crispy-forms==2.1
 crispy-bootstrap5==2024.2
+dj_database_url
