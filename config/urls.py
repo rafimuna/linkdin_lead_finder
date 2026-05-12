@@ -1,20 +1,50 @@
-# config/urls.py
 from django.contrib import admin
 from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
+from django.contrib.auth import views as auth_views
+from scraper import views as scraper_views
+from dashboard import views as dashboard_views  # যদি dashboard app এ আলাদা views থাকে
 
 urlpatterns = [
-    # Admin panel
     path('admin/', admin.site.urls),
     
-    # Our apps
-    path('', include('scraper.urls')),      # Root URL will go to scraper app
-    path('dashboard/', include('dashboard.urls')),  # Dashboard URLs
-    path('users/', include('users.urls')),  # Authentication URLs
+    # Home page (scraper home)
+    path('', scraper_views.home, name='home'),
+    
+    # Authentication URLs
+    path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
+    
+    # Users app (Registration, Profile)
+    path('users/', include('users.urls')),
+    
+    # Dashboard (scraper dashboard_view ব্যবহার করবে)
+    path('dashboard/', scraper_views.dashboard_view, name='dashboard'),
+    
+    # Profile detail and actions
+    path('profile/<int:profile_id>/', scraper_views.profile_detail, name='profile_detail'),
+    path('profile/<int:profile_id>/delete/', scraper_views.delete_profile, name='delete_profile'),
+    path('profile/<int:profile_id>/classify/', scraper_views.classify_single_profile, name='classify_single'),
+    
+    # Search and scraping
+    path('search/', scraper_views.search_profiles, name='search'),
+    path('manual-add/', scraper_views.manual_add_profiles, name='manual_add'),
+    path('quick-add/', scraper_views.quick_add_profiles, name='quick_add'),
+    
+    # Exports
+    path('export/csv/', scraper_views.export_csv, name='export_csv'),
+    path('export/excel/', scraper_views.export_excel, name='export_excel'),
+    
+    # History
+    path('search-history/', scraper_views.search_history, name='search_history'),
+    
+    # API and test endpoints
+    path('api/search-status/', scraper_views.search_status, name='search_status'),
+    path('api/profile-stats/', scraper_views.profile_stats_api, name='profile_stats_api'),
+    path('test-scraper/', scraper_views.test_scraper, name='test_scraper'),
+    
+    # Reclassify all
+    path('reclassify-all/', scraper_views.reclassify_profiles, name='reclassify_all'),
+    
+    # Exports app (যদি থাকে)
+    path('exports/', include('exports.urls')),
 ]
-
-# Serve media files in development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
