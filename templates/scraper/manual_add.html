@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h3><i class="fas fa-plus-circle"></i> Manually Add LinkedIn Profiles</h3>
+        </div>
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label class="form-label">LinkedIn Profile URLs (One per line)</label>
+                    <textarea name="urls" rows="6" class="form-control" placeholder="https://www.linkedin.com/in/username/&#10;https://www.linkedin.com/in/another/"></textarea>
+                    <small class="text-muted">Enter LinkedIn profile URLs, each on a new line</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select">
+                        <option value="recruiter">Recruiter</option>
+                        <option value="hr">HR Professional</option>
+                        <option value="backend_dev">Backend Developer</option>
+                        <option value="frontend_dev">Frontend Developer</option>
+                        <option value="fullstack_dev">Fullstack Developer</option>
+                        <option value="manager">Manager</option>
+                        <option value="ceo">CEO/Founder</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-warning">
+                    <i class="fas fa-save"></i> Add Profiles
+                </button>
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h5><i class="fas fa-lightbulb"></i> Sample URLs to Test</h5>
+        </div>
+        <div class="card-body">
+            <pre class="bg-light p-3 rounded">{{ sample_urls }}</pre>
+            <button class="btn btn-sm btn-outline-primary" onclick="copySample()">Copy Sample URLs</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function copySample() {
+    const sample = `{{ sample_urls|escapejs }}`;
+    navigator.clipboard.writeText(sample);
+    alert('Sample URLs copied to clipboard!');
+}
+</script>
+{% endblock %}

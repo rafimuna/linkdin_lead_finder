@@ -218,14 +218,18 @@ def export_excel(request):
     except ImportError:
         messages.error(request, 'Pandas not installed.')
         return redirect('dashboard')
-
-
 @login_required
 def manual_add_profiles(request):
-    """Manually add LinkedIn URLs"""
+    """
+    Manually add LinkedIn URLs
+    """
     if request.method == 'POST':
         urls_text = request.POST.get('urls', '')
         category = request.POST.get('category', 'other')
+        
+        if not urls_text:
+            messages.error(request, 'Please enter at least one LinkedIn URL!')
+            return redirect('manual_add')
         
         urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
         
@@ -235,12 +239,19 @@ def manual_add_profiles(request):
         
         for url in urls:
             if 'linkedin.com/in/' in url:
+                # Clean the URL
                 if '#:~:text' in url:
                     url = url.split('#:~:text')[0]
                 
+                # Extract name from URL
                 match = re.search(r'/in/([^/?]+)', url)
-                name = match.group(1).replace('-', ' ').replace('_', ' ').title() if match else 'Unknown'
+                if match:
+                    name_raw = match.group(1)
+                    name = name_raw.replace('-', ' ').replace('_', ' ').title()
+                else:
+                    name = 'Unknown Profile'
                 
+                # Check if already exists
                 profile, created = Profile.objects.get_or_create(
                     linkedin_url=url,
                     defaults={
@@ -271,13 +282,20 @@ def manual_add_profiles(request):
         
         return redirect('dashboard')
     
+    # Sample URLs for testing
     sample_urls = """https://www.linkedin.com/in/satya-nadella/
 https://www.linkedin.com/in/tim-cook/
 https://www.linkedin.com/in/sundarpichai/
 https://www.linkedin.com/in/jeffweiner/"""
     
-    return render(request, 'scraper/manual_add.html', {'sample_urls': sample_urls})
+    context = {
+        'sample_urls': sample_urls
+    }
+    return render(request, 'scraper/manual_add.html', context)
 
+
+       
+          
 
 @login_required
 def search_history(request):
