@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.contrib.auth import views as auth_views
 from scraper import views as scraper_views
+from users import views as user_views
 from dashboard import views as dashboard_views  # যদি dashboard app এ আলাদা views থাকে
 
 urlpatterns = [
@@ -11,8 +11,8 @@ urlpatterns = [
     path('', scraper_views.home, name='home'),
     
     # Authentication URLs
-    path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='home'), name='logout'),
+    path('login/', user_views.login_view, name='login'),      # ← কাস্টম view
+    path('logout/', user_views.logout_view, name='logout'),   # ← কাস্টম view
     
     # Users app (Registration, Profile)
     path('users/', include('users.urls')),
