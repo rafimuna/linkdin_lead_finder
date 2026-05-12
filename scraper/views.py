@@ -303,18 +303,44 @@ https://www.linkedin.com/in/jeffweiner/"""
 # ========== SEARCH HISTORY ==========
 
 @login_required
-def search_history(request):
-    """
-    View search history
-    """
-    histories = SearchHistory.objects.filter(user=request.user).order_by('-created_at')
+def search_profiles(request):
+    """Search LinkedIn profiles - Working version"""
     
-    paginator = Paginator(histories, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    if request.method == 'POST':
+        keyword = request.POST.get('keyword', '')
+        
+        if not keyword:
+            messages.error(request, 'Please enter a keyword to search!')
+            return render(request, 'scraper/search.html')
+        
+        # Save search history
+        SearchHistory.objects.create(
+            user=request.user,
+            keyword=keyword,
+            ip_address=get_client_ip(request),
+            results_count=0  # Will update after scraping
+        )
+        
+        # Redirect to results page with keyword
+        return redirect(f'/results/?keyword={keyword}')
     
-    return render(request, 'dashboard/search_history.html', {'page_obj': page_obj})
+    # GET request - show search form
+    return render(request, 'scraper/search.html')
 
+
+@login_required
+def results_view(request):
+    """Show search results"""
+    keyword = request.GET.get('keyword', '')
+    
+    if not keyword:
+        return redirect('search')
+    
+    # If you have scraping logic, add here
+    # For now, show a message
+    messages.info(request, f'Searching for "{keyword}"... This feature is being developed.')
+    
+    return render(request, 'scraper/results.html', {'keyword': keyword})
 
 # ========== AI CLASSIFICATION ==========
 

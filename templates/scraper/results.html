@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h3>Search Results for "{{ keyword }}"</h3>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                🔍 Searching for LinkedIn profiles matching "{{ keyword }}"...
+            </div>
+            <p class="text-muted">This feature is currently under development. Check back soon!</p>
+            <a href="{% url 'search' %}" class="btn btn-primary">New Search</a>
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Go to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

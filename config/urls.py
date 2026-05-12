@@ -19,7 +19,7 @@ urlpatterns = [
     
     # Dashboard (scraper dashboard_view ব্যবহার করবে)
     path('dashboard/', scraper_views.dashboard_view, name='dashboard'),
-    
+    path('results/', scraper_views.results_view, name='results'),
     # Profile detail and actions
     path('profile/<int:profile_id>/', scraper_views.profile_detail, name='profile_detail'),
     path('profile/<int:profile_id>/delete/', scraper_views.delete_profile, name='delete_profile'),
