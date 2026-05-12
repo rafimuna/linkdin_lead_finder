@@ -1,0 +1,265 @@
+<!-- templates/dashboard/dashboard.html -->
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - LinkedIn Lead Finder</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stats-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+        }
+        .stats-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stats-label {
+            color: #666;
+            font-size: 14px;
+        }
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .filter-section {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        .profile-link {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .profile-link:hover {
+            text-decoration: underline;
+        }
+        .badge-category {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .badge-recruiter { background: #ff4757; color: white; }
+        .badge-hr { background: #ffa502; color: white; }
+        .badge-backend_dev { background: #1e90ff; color: white; }
+        .badge-frontend_dev { background: #2ed573; color: white; }
+        .badge-manager { background: #a4b0be; color: white; }
+        .badge-ceo { background: #8e44ad; color: white; }
+        .badge-other { background: #747d8c; color: white; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-custom navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-linkedin"></i> AI LinkedIn Lead Finder
+            </a>
+            <div class="ms-auto">
+                <span class="text-white me-3">
+                    <i class="fas fa-user"></i> {{ request.user.username }}
+                </span>
+                <a href="{% url 'logout' %}" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% else %}info{% endif %} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Stats Cards -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="stats-number">{{ total_profiles }}</div>
+                    <div class="stats-label">Total Profiles</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="stats-number">{{ categories_stats.recruiter|add:categories_stats.hr }}</div>
+                    <div class="stats-label">HR & Recruiters</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="stats-number">{{ categories_stats.backend_dev|add:categories_stats.frontend_dev }}</div>
+                    <div class="stats-label">Developers</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card text-center">
+                    <div class="stats-number">{{ categories_stats.manager|add:categories_stats.ceo }}</div>
+                    <div class="stats-label">Leadership</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="filter-section">
+            <h5><i class="fas fa-filter"></i> Filter Results</h5>
+            <form method="GET" action="{% url 'dashboard' %}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <select name="category" class="form-select">
+                            <option value="all">All Categories</option>
+                            <option value="recruiter" {% if current_category == 'recruiter' %}selected{% endif %}>Recruiter</option>
+                            <option value="hr" {% if current_category == 'hr' %}selected{% endif %}>HR Professional</option>
+                            <option value="backend_dev" {% if current_category == 'backend_dev' %}selected{% endif %}>Backend Developer</option>
+                            <option value="frontend_dev" {% if current_category == 'frontend_dev' %}selected{% endif %}>Frontend Developer</option>
+                            <option value="manager" {% if current_category == 'manager' %}selected{% endif %}>Manager</option>
+                            <option value="ceo" {% if current_category == 'ceo' %}selected{% endif %}>CEO/Founder</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" name="location" class="form-control" placeholder="Location filter" value="{{ current_location }}">
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" name="search" class="form-control" placeholder="Search by name or headline" value="{{ current_search }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary-custom btn-primary w-100">
+                            <i class="fas fa-search"></i> Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Table -->
+        <div class="table-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-users"></i> LinkedIn Profiles</h5>
+                <div>
+                    <a href="{% url 'search' %}" class="btn btn-primary-custom btn-primary btn-sm me-2">
+                        <i class="fas fa-search"></i> New Search
+                    </a>
+                    <a href="{% url 'export_csv' %}" class="btn btn-success btn-sm">
+                        <i class="fas fa-download"></i> Export CSV
+                    </a>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Headline</th>
+                            <th>Location</th>
+                            <th>Category</th>
+                            <th>LinkedIn</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for profile in page_obj %}
+                        <tr>
+                            <td>
+                                <strong>{{ profile.name|truncatechars:30 }}</strong>
+                            </td>
+                            <td>{{ profile.headline|truncatechars:40|default:"-" }}</td>
+                            <td>{{ profile.location|truncatechars:30|default:"-" }}</td>
+                            <td>
+                                <span class="badge-category badge-{{ profile.category }}">
+                                    {{ profile.get_category_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{{ profile.linkedin_url }}" target="_blank" class="profile-link">
+                                    <i class="fab fa-linkedin"></i> View
+                                </a>
+                            </td>
+                            <td>{{ profile.created_at|date:"Y-m-d" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <p>No profiles found. Start a new search!</p>
+                                <a href="{% url 'search' %}" class="btn btn-primary-custom btn-primary">
+                                    <i class="fas fa-search"></i> Search Now
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_search %}&search={{ current_search }}{% endif %}">
+                                Previous
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_search %}&search={{ current_search }}{% endif %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_location %}&location={{ current_location }}{% endif %}{% if current_search %}&search={{ current_search }}{% endif %}">
+                                Next
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

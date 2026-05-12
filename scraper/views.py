@@ -1,20 +1,18 @@
-# scraper/views.py - COMPLETE WORKING VERSION
+# scraper/views.py - Add all missing functions
 
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.utils import timezone
+from django.db.models import Count, Q
+from .models import Profile, SearchHistory
+import csv
 import json
-import traceback
 import re
 
-# Import your services
-from .services.google_search_selenium import SeleniumGoogleSearch
-from .services.linkedin_scraper import BatchLinkedInScraper
-from .models import Profile, SearchHistory
-
+# ========== Existing Functions Keep as is ==========
 
 def home(request):
     """Home page view"""
@@ -33,118 +31,19 @@ def get_client_ip(request):
 
 @login_required
 def search_profiles(request):
-    """
-    Search LinkedIn profiles based on keyword
-    This is the main search view
-    """
-    if request.method == 'POST':
-        keyword = request.POST.get('keyword', '').strip()
-        
-        if not keyword:
-            messages.error(request, 'Please enter a search keyword')
-            return redirect('search')
-        
-        # Start timing
-        start_time = timezone.now()
-        
-        try:
-            # Step 1: Search Google for LinkedIn profiles using Selenium
-            messages.info(request, f'🔍 Searching for "{keyword}"...')
-            
-            # Initialize Selenium scraper (headless=False so you can see the browser)
-            google_scraper = SeleniumGoogleSearch(headless=False)
-            profile_urls = google_scraper.search_linkedin_profiles(keyword, max_results=15)
-            google_scraper.close()
-            
-            if not profile_urls:
-                messages.warning(request, f'No LinkedIn profiles found for "{keyword}". Try a different keyword.')
-                return redirect('search')
-            
-            messages.success(request, f'Found {len(profile_urls)} LinkedIn profiles!')
-            
-            # Optional: Show found URLs in console for debugging
-            print(f"\n📋 Found LinkedIn URLs for '{keyword}':")
-            for url in profile_urls[:5]:  # Show first 5
-                print(f"  - {url}")
-            
-            # Step 2: Scrape profile details
-            messages.info(request, '📊 Scraping profile details... This may take a moment.')
-            batch_scraper = BatchLinkedInScraper(delay_between_requests=2)
-            scraped_profiles = batch_scraper.scrape_multiple(profile_urls)
-            
-            # Step 3: Save to database
-            saved_count = 0
-            updated_count = 0
-            
-            for profile_data in scraped_profiles:
-                if profile_data and profile_data.get('linkedin_url'):
-                    profile, created = Profile.objects.get_or_create(
-                        linkedin_url=profile_data['linkedin_url'],
-                        defaults={
-                            'name': profile_data.get('name') or 'Unknown',
-                            'headline': profile_data.get('headline', '')[:250] if profile_data.get('headline') else '',
-                            'location': profile_data.get('location', '')[:100] if profile_data.get('location') else '',
-                            'about': profile_data.get('about', '')[:500] if profile_data.get('about') else '',
-                            'skills': profile_data.get('skills', '') if profile_data.get('skills') else '',
-                            'search_keyword': keyword,
-                            'scrape_status': 'completed',
-                            'is_scraped': True,
-                            'last_scraped_at': timezone.now()
-                        }
-                    )
-                    
-                    if created:
-                        saved_count += 1
-                    else:
-                        # Update existing profile
-                        profile.search_keyword = keyword
-                        profile.last_scraped_at = timezone.now()
-                        profile.save(update_fields=['search_keyword', 'last_scraped_at'])
-                        updated_count += 1
-            
-            # Calculate duration
-            duration = (timezone.now() - start_time).total_seconds()
-            
-            # Save search history
-            SearchHistory.objects.create(
-                keyword=keyword,
-                total_results_found=len(profile_urls),
-                profiles_scraped=len(scraped_profiles),
-                search_duration=duration,
-                user=request.user,
-                ip_address=get_client_ip(request)
-            )
-            
-            messages.success(
-                request, 
-                f'✅ Search completed!\n'
-                f'📊 Found: {len(profile_urls)} profiles\n'
-                f'✅ Scraped: {len(scraped_profiles)} profiles\n'
-                f'💾 Saved: {saved_count} new, {updated_count} updated\n'
-                f'⏱️ Time: {duration:.2f} seconds'
-            )
-            
-            # Store results in session for dashboard
-            request.session['last_search_keyword'] = keyword
-            request.session['last_search_results'] = len(scraped_profiles)
-            
-            return redirect('dashboard')
-            
-        except Exception as e:
-            print(f"Error in search: {traceback.format_exc()}")
-            messages.error(request, f'Error occurred: {str(e)[:200]}')
-            return redirect('search')
-    
-    # GET request - show search form
-    return render(request, 'scraper/search.html')
+    """Search LinkedIn profiles - Keep your existing code"""
+    # Your existing search_profiles code here
+    pass
 
+
+# ========== DASHBOARD VIEW - COMPLETE ==========
 
 @login_required
 def dashboard_view(request):
     """
-    Dashboard to show scraped profiles
+    Dashboard to show scraped profiles with filters and pagination
     """
-    # Get filter parameters
+    # Get filter parameters from GET request
     category = request.GET.get('category', '')
     location = request.GET.get('location', '')
     search_query = request.GET.get('search', '')
@@ -152,38 +51,49 @@ def dashboard_view(request):
     # Start with all profiles
     profiles = Profile.objects.all()
     
-    # Apply filters
+    # Apply category filter
     if category and category != 'all':
         profiles = profiles.filter(category=category)
     
+    # Apply location filter
     if location:
         profiles = profiles.filter(location__icontains=location)
     
+    # Apply search filter (name or headline)
     if search_query:
         profiles = profiles.filter(
-            models.Q(name__icontains=search_query) |
-            models.Q(headline__icontains=search_query) |
-            models.Q(skills__icontains=search_query)
+            Q(name__icontains=search_query) |
+            Q(headline__icontains=search_query) |
+            Q(skills__icontains=search_query)
         )
     
     # Order by latest first
     profiles = profiles.order_by('-created_at')
     
-    # Pagination
-    paginator = Paginator(profiles, 20)  # 20 profiles per page
+    # Pagination - 20 profiles per page
+    paginator = Paginator(profiles, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Get statistics
+    # Get statistics for dashboard cards
     total_profiles = Profile.objects.count()
+    
+    # Category wise statistics
     categories_stats = {
         'recruiter': Profile.objects.filter(category='recruiter').count(),
         'hr': Profile.objects.filter(category='hr').count(),
         'backend_dev': Profile.objects.filter(category='backend_dev').count(),
         'frontend_dev': Profile.objects.filter(category='frontend_dev').count(),
+        'fullstack_dev': Profile.objects.filter(category='fullstack_dev').count(),
         'manager': Profile.objects.filter(category='manager').count(),
         'ceo': Profile.objects.filter(category='ceo').count(),
+        'other': Profile.objects.filter(category='other').count(),
     }
+    
+    # Recent searches (last 5)
+    recent_searches = SearchHistory.objects.filter(
+        user=request.user
+    ).order_by('-created_at')[:5]
     
     context = {
         'page_obj': page_obj,
@@ -192,35 +102,65 @@ def dashboard_view(request):
         'current_category': category,
         'current_location': location,
         'current_search': search_query,
+        'recent_searches': recent_searches,
     }
     
     return render(request, 'dashboard/dashboard.html', context)
 
+
+# ========== PROFILE DETAIL VIEW ==========
 
 @login_required
 def profile_detail(request, profile_id):
     """
     View single profile details
     """
-    try:
-        profile = Profile.objects.get(id=profile_id)
-        return render(request, 'dashboard/profile_detail.html', {'profile': profile})
-    except Profile.DoesNotExist:
-        messages.error(request, 'Profile not found')
-        return redirect('dashboard')
+    profile = get_object_or_404(Profile, id=profile_id)
+    
+    # Get related profiles (same category)
+    related_profiles = Profile.objects.filter(
+        category=profile.category
+    ).exclude(id=profile.id)[:5]
+    
+    context = {
+        'profile': profile,
+        'related_profiles': related_profiles,
+    }
+    
+    return render(request, 'dashboard/profile_detail.html', context)
 
+
+# ========== DELETE PROFILE ==========
+
+@login_required
+def delete_profile(request, profile_id):
+    """
+    Delete a profile (requires admin or owner)
+    """
+    profile = get_object_or_404(Profile, id=profile_id)
+    
+    # Only superuser can delete
+    if not request.user.is_superuser:
+        messages.error(request, 'Only admin can delete profiles')
+        return redirect('dashboard')
+    
+    profile_name = profile.name
+    profile.delete()
+    messages.success(request, f'Successfully deleted: {profile_name}')
+    
+    return redirect('dashboard')
+
+
+# ========== CSV EXPORT ==========
 
 @login_required
 def export_csv(request):
     """
-    Export profiles to CSV
+    Export all profiles to CSV file
     """
-    import csv
-    from django.http import HttpResponse
-    
-    # Create CSV response
+    # Create response object
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="linkedin_profiles.csv"'
+    response['Content-Disposition'] = 'attachment; filename="linkedin_profiles_export.csv"'
     
     # Get all profiles
     profiles = Profile.objects.all().order_by('-created_at')
@@ -230,20 +170,24 @@ def export_csv(request):
     
     # Write headers
     writer.writerow([
-        'Name', 'Headline', 'Location', 'Category', 
-        'LinkedIn URL', 'Skills', 'Created At'
+        'ID', 'Name', 'Headline', 'Location', 'Category', 
+        'LinkedIn URL', 'Skills', 'Search Keyword', 
+        'Created At', 'Last Scraped'
     ])
     
-    # Write data
+    # Write data rows
     for profile in profiles:
         writer.writerow([
+            profile.id,
             profile.name,
             profile.headline or '',
             profile.location or '',
             profile.get_category_display(),
             profile.linkedin_url,
             profile.skills or '',
-            profile.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            profile.search_keyword or '',
+            profile.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            profile.last_scraped_at.strftime('%Y-%m-%d %H:%M:%S') if profile.last_scraped_at else '',
         ])
     
     messages.success(request, f'Exported {profiles.count()} profiles to CSV')
@@ -251,109 +195,99 @@ def export_csv(request):
 
 
 @login_required
-def search_status(request):
-    """AJAX endpoint to check search status"""
-    return JsonResponse({'status': 'ready', 'message': 'Search system ready'})
-
-
-def test_scraper(request):
-    """Test view to check if scraper works (admin only)"""
-    if not request.user.is_authenticated or not request.user.is_superuser:
-        return HttpResponse("Access denied. Admin only.", status=403)
-    
-    keyword = request.GET.get('keyword', 'Python Developer')
-    
+def export_excel(request):
+    """
+    Export to Excel format (using pandas if available)
+    """
     try:
-        # Test with Selenium
-        scraper = SeleniumGoogleSearch(headless=False)
-        urls = scraper.search_linkedin_profiles(keyword, max_results=5)
-        scraper.close()
+        import pandas as pd
+        from io import BytesIO
         
-        result = f"""
-        <html>
-        <head>
-            <title>Scraper Test Results</title>
-            <style>
-                body {{ font-family: Arial; margin: 20px; }}
-                .success {{ color: green; }}
-                .error {{ color: red; }}
-                ul {{ background: #f0f0f0; padding: 20px; }}
-                li {{ margin: 10px 0; }}
-            </style>
-        </head>
-        <body>
-            <h1>🔍 Scraper Test Results</h1>
-            <h2>Keyword: {keyword}</h2>
-            <p class="success">✅ Found {len(urls)} LinkedIn profiles:</p>
-            <ul>
-        """
+        profiles = Profile.objects.all().values(
+            'name', 'headline', 'location', 'category', 
+            'linkedin_url', 'skills', 'search_keyword', 'created_at'
+        )
         
-        for url in urls:
-            result += f"<li><a href='{url}' target='_blank'>{url}</a></li>"
+        df = pd.DataFrame(list(profiles))
         
-        result += """
-            </ul>
-            <p>⏱️ Test completed successfully!</p>
-            <a href="/search/">← Back to Search</a>
-        </body>
-        </html>
-        """
+        # Convert category codes to labels
+        category_labels = dict(Profile._meta.get_field('category').choices)
+        df['category'] = df['category'].map(category_labels)
         
-        return HttpResponse(result)
+        # Create Excel file
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name='LinkedIn Profiles', index=False)
         
-    except Exception as e:
-        return HttpResponse(f"""
-        <html>
-        <body>
-            <h1 class="error">❌ Error</h1>
-            <p>Error: {str(e)}</p>
-            <p>Make sure Chrome browser is installed!</p>
-            <a href="/search/">← Back to Search</a>
-        </body>
-        </html>
-        """)
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="linkedin_profiles.xlsx"'
+        
+        messages.success(request, f'Exported {len(df)} profiles to Excel')
+        return response
+        
+    except ImportError:
+        messages.error(request, 'Pandas not installed. Please install: pip install pandas openpyxl')
+        return redirect('dashboard')
 
+
+# ========== MANUAL ADD PROFILES ==========
 
 @login_required
 def manual_add_profiles(request):
     """
-    Manually add LinkedIn URLs for testing
+    Manually add LinkedIn URLs
     """
     if request.method == 'POST':
         urls_text = request.POST.get('urls', '')
+        category = request.POST.get('category', 'other')
+        
         urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
         
         saved_count = 0
-        failed_urls = []
+        duplicate_count = 0
+        invalid_count = 0
         
         for url in urls:
             if 'linkedin.com/in/' in url:
+                # Clean the URL
+                if '#:~:text' in url:
+                    url = url.split('#:~:text')[0]
+                
                 # Extract name from URL
                 match = re.search(r'/in/([^/?]+)', url)
                 name = match.group(1).replace('-', ' ').replace('_', ' ').title() if match else 'Unknown'
                 
+                # Check if already exists
                 profile, created = Profile.objects.get_or_create(
                     linkedin_url=url,
                     defaults={
                         'name': name,
-                        'headline': 'Manually Added Profile',
+                        'headline': f'Manually Added - {category}',
                         'location': 'Not specified',
+                        'category': category,
                         'search_keyword': 'manual',
                         'scrape_status': 'completed',
                         'is_scraped': True,
+                        'last_scraped_at': timezone.now()
                     }
                 )
+                
                 if created:
                     saved_count += 1
                 else:
-                    failed_urls.append(url)
+                    duplicate_count += 1
             else:
-                failed_urls.append(url)
+                invalid_count += 1
         
         if saved_count > 0:
-            messages.success(request, f'✅ Added {saved_count} profiles manually!')
-        if failed_urls:
-            messages.warning(request, f'⚠️ Failed to add {len(failed_urls)} URLs (invalid LinkedIn URLs)')
+            messages.success(request, f'✅ Added {saved_count} new profiles!')
+        if duplicate_count > 0:
+            messages.warning(request, f'⚠️ {duplicate_count} profiles already exist')
+        if invalid_count > 0:
+            messages.error(request, f'❌ {invalid_count} invalid LinkedIn URLs')
         
         return redirect('dashboard')
     
@@ -366,39 +300,127 @@ https://www.linkedin.com/in/jeffweiner/"""
     return render(request, 'scraper/manual_add.html', {'sample_urls': sample_urls})
 
 
-@login_required
-def delete_profile(request, profile_id):
-    """
-    Delete a profile (admin only)
-    """
-    if not request.user.is_superuser:
-        messages.error(request, 'Only admin can delete profiles')
-        return redirect('dashboard')
-    
-    try:
-        profile = Profile.objects.get(id=profile_id)
-        profile_name = profile.name
-        profile.delete()
-        messages.success(request, f'Deleted profile: {profile_name}')
-    except Profile.DoesNotExist:
-        messages.error(request, 'Profile not found')
-    
-    return redirect('dashboard')
-
-
-@login_required
-def reclassify_profiles(request):
-    """
-    Reclassify all profiles using AI (to be implemented in Phase 8)
-    """
-    messages.info(request, 'AI classification feature coming in Phase 8!')
-    return redirect('dashboard')
-
+# ========== SEARCH HISTORY ==========
 
 @login_required
 def search_history(request):
     """
     View search history
     """
-    histories = SearchHistory.objects.filter(user=request.user).order_by('-created_at')[:50]
-    return render(request, 'dashboard/search_history.html', {'histories': histories})
+    histories = SearchHistory.objects.filter(user=request.user).order_by('-created_at')
+    
+    paginator = Paginator(histories, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'dashboard/search_history.html', {'page_obj': page_obj})
+
+
+# ========== AI CLASSIFICATION ==========
+
+@login_required
+def reclassify_profiles(request):
+    """
+    Reclassify all profiles using AI
+    """
+    from .services.ai_classifier import classify_profiles_batch
+    
+    messages.info(request, 'AI classification started...')
+    
+    # Run classification in background (for now, run sync)
+    result = classify_profiles_batch()
+    
+    messages.success(request, f'AI classification completed! Updated {result} profiles')
+    return redirect('dashboard')
+
+
+@login_required
+def classify_single_profile(request, profile_id):
+    """
+    Classify a single profile
+    """
+    from .services.ai_classifier import classify_profile
+    
+    profile = get_object_or_404(Profile, id=profile_id)
+    new_category, confidence = classify_profile(profile)
+    
+    profile.update_category(new_category, confidence)
+    messages.success(request, f'Profile classified as: {profile.get_category_display()} (Confidence: {confidence}%)')
+    
+    return redirect('profile_detail', profile_id=profile_id)
+
+
+# ========== API ENDPOINTS ==========
+
+@login_required
+def search_status(request):
+    """AJAX endpoint to check search status"""
+    return JsonResponse({'status': 'ready', 'message': 'Search system ready'})
+
+
+@login_required
+def profile_stats_api(request):
+    """API endpoint for profile statistics"""
+    stats = {
+        'total': Profile.objects.count(),
+        'by_category': dict(Profile.objects.values_list('category').annotate(count=Count('id'))),
+        'last_7_days': Profile.objects.filter(created_at__gte=timezone.now() - timezone.timedelta(days=7)).count(),
+    }
+    return JsonResponse(stats)
+
+
+# ========== TEST FUNCTIONS ==========
+
+@login_required
+def test_scraper(request):
+    """Test scraper (admin only)"""
+    if not request.user.is_superuser:
+        return HttpResponse("Access denied", status=403)
+    
+    from .services.google_search_selenium import SeleniumGoogleSearch
+    
+    keyword = request.GET.get('keyword', 'Python Developer')
+    
+    try:
+        scraper = SeleniumGoogleSearch(headless=False)
+        urls = scraper.search_linkedin_profiles(keyword, max_results=5)
+        scraper.close()
+        
+        result = f"<h2>Test Results for '{keyword}'</h2>"
+        result += f"<p>Found {len(urls)} profiles:</p><ul>"
+        for url in urls:
+            result += f"<li>{url}</li>"
+        result += "</ul><a href='/dashboard/'>Back to Dashboard</a>"
+        
+        return HttpResponse(result)
+    except Exception as e:
+        return HttpResponse(f"Error: {e}")
+
+
+@login_required
+def quick_add_profiles(request):
+    """Quick add predefined test profiles"""
+    test_profiles = [
+        {'name': 'Satya Nadella', 'url': 'https://www.linkedin.com/in/satya-nadella/', 'category': 'ceo'},
+        {'name': 'Tim Cook', 'url': 'https://www.linkedin.com/in/tim-cook/', 'category': 'ceo'},
+        {'name': 'Sundar Pichai', 'url': 'https://www.linkedin.com/in/sundarpichai/', 'category': 'ceo'},
+    ]
+    
+    added = 0
+    for data in test_profiles:
+        profile, created = Profile.objects.get_or_create(
+            linkedin_url=data['url'],
+            defaults={
+                'name': data['name'],
+                'headline': f'CEO of Major Tech Company',
+                'category': data['category'],
+                'search_keyword': 'quick_add',
+                'scrape_status': 'completed',
+                'is_scraped': True,
+            }
+        )
+        if created:
+            added += 1
+    
+    messages.success(request, f'Added {added} test profiles!')
+    return redirect('dashboard')
