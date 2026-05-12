@@ -1,12 +1,13 @@
-# users/views.py - সম্পূর্ণ আপডেটেড এবং ইন্ডেন্টেশন ঠিক করা
+# users/views.py - সম্পূর্ণ আপডেটেড ওয়ার্কিং ভার্সন
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm
 
 def login_view(request):
-    """User login view"""
+    """User login view - Working with manual form"""
+    
+    # যদি ইতিমধ্যে লগইন করা থাকে
     if request.user.is_authenticated:
         return redirect('dashboard')
     
@@ -14,6 +15,7 @@ def login_view(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         
+        # ইউজার অথেনটিকেট করুন
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
@@ -22,8 +24,10 @@ def login_view(request):
             return redirect('dashboard')
         else:
             messages.error(request, 'Invalid username or password!')
-            return redirect('login')
+            # ফর্মটি আবার দেখান
+            return render(request, 'users/login.html')
     
+    # GET রিকোয়েস্ট - ফর্ম দেখান
     return render(request, 'users/login.html')
 
 
@@ -35,25 +39,43 @@ def logout_view(request):
 
 
 def register_view(request):
-    """User registration view"""
+    """User registration view - Working with manual form"""
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            username = form.cleaned_data.get('username')
-            messages.success(request, f'Account created for {username}! Please login.')
-            return redirect('login')
-        else:
-            messages.error(request, 'Please correct the errors below.')
-    else:
-        form = UserCreationForm()
+        username = request.POST.get('username')
+        email = request.POST.get('email', '')
+        password1 = request.POST.get('password1')
+        password2 = request.POST.get('password2')
+        
+        # ভ্যালিডেশন
+        if password1 != password2:
+            messages.error(request, 'Passwords do not match!')
+            return redirect('register')
+        
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists!')
+            return redirect('register')
+        
+        if len(password1) < 6:
+            messages.error(request, 'Password must be at least 6 characters!')
+            return redirect('register')
+        
+        # ইউজার তৈরি করুন
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password1
+        )
+        user.save()
+        
+        messages.success(request, f'Account created for {username}! Please login.')
+        return redirect('login')
     
-    return render(request, 'users/register.html', {'form': form})
+    # GET রিকোয়েস্ট - ফর্ম দেখান
+    return render(request, 'users/register.html')
 
 
 def profile_view(request):
-    """User profile view - requires login"""
+    """User profile view"""
     if not request.user.is_authenticated:
         return redirect('login')
-    
     return render(request, 'users/profile.html', {'user': request.user})
