@@ -1,16 +1,12 @@
-# users/views.py - সম্পূর্ণ আপডেটেড ভার্সন (কোনো disabled attribute নেই)
+# users/views.py - সম্পূর্ণ আপডেটেড এবং ইন্ডেন্টেশন ঠিক করা
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.contrib.auth.forms import UserCreationForm 
+from django.contrib.auth.forms import UserCreationForm
 
 def login_view(request):
-    """
-    User login view - working version with enabled form fields
-    """
-    
-    # যদি ইতিমধ্যে logged in থাকে
+    """User login view"""
     if request.user.is_authenticated:
         return redirect('dashboard')
     
@@ -18,7 +14,6 @@ def login_view(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         
-        # Authenticate user
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
@@ -29,18 +24,20 @@ def login_view(request):
             messages.error(request, 'Invalid username or password!')
             return redirect('login')
     
-    # GET request - show login form
     return render(request, 'users/login.html')
+
 
 def logout_view(request):
     """User logout view"""
     logout(request)
     messages.info(request, 'You have been logged out successfully.')
     return redirect('home')
+
+
 def register_view(request):
     """User registration view"""
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)  # ← form তৈরি করুন
+        form = UserCreationForm(request.POST)
         if form.is_valid():
             form.save()
             username = form.cleaned_data.get('username')
@@ -49,15 +46,10 @@ def register_view(request):
         else:
             messages.error(request, 'Please correct the errors below.')
     else:
-        form = UserCreationForm()  # ← empty form
+        form = UserCreationForm()
     
-    return render(request, 'users/register.html', {'form': form})  # ← form পাস করুন
+    return render(request, 'users/register.html', {'form': form})
 
-        
-        
-       
-        
-        
 
 def profile_view(request):
     """User profile view - requires login"""
