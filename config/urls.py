@@ -39,7 +39,7 @@ urlpatterns = [
     # API and test endpoints
     path('api/search-status/', scraper_views.search_status, name='search_status'),
     path('api/profile-stats/', scraper_views.profile_stats_api, name='profile_stats_api'),
-    path('test-scraper/', scraper_views.test_scraper, name='test_scraper'),
+    
     
     # Reclassify all
     path('reclassify-all/', scraper_views.reclassify_profiles, name='reclassify_all'),
