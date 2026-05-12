@@ -23,7 +23,6 @@ urlpatterns = [
     # Profile detail and actions
     path('profile/<int:profile_id>/', scraper_views.profile_detail, name='profile_detail'),
     path('profile/<int:profile_id>/delete/', scraper_views.delete_profile, name='delete_profile'),
-    path('profile/<int:profile_id>/classify/', scraper_views.classify_single_profile, name='classify_single'),
     
     # Search and scraping
     path('search/', scraper_views.search_profiles, name='search'),
