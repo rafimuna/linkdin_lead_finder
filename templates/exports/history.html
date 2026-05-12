@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">📜 Export History</h1>
+            <a href="{% url 'export_dashboard' %}" class="btn btn-secondary mb-3">
+                ← Back to Export Dashboard
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    {% if page_obj %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Format</th>
+                                    <th>Export Type</th>
+                                    <th>Records</th>
+                                    <th>File Name</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for export in page_obj %}
+                                <tr>
+                                    <td>{{ export.created_at|date:"Y-m-d H:i:s" }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if export.export_format == 'csv' %}success{% elif export.export_format == 'excel' %}primary{% else %}danger{% endif %}">
+                                            {{ export.export_format|upper }}
+                                        </span>
+                                    </td>
+                                    <td>{{ export.get_export_type_display }}</td>
+                                    <td>{{ export.record_count }}</td>
+                                    <td><small>{{ export.file_name }}</small></td>
+                                    <td>
+                                        <a href="{% url 'download_export' export.id %}" class="btn btn-sm btn-primary">
+                                            Download
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if page_obj.has_other_pages %}
+                    <nav>
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    
+                    {% else %}
+                    <div class="alert alert-info text-center">
+                        <h5>No export history found</h5>
+                        <p>Start exporting profiles from the <a href="{% url 'export_dashboard' %}">Export Dashboard</a></p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">📤 Export LinkedIn Profiles</h1>
+            <p class="lead">Export your scraped profiles in multiple formats</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Profiles</h5>
+                    <h2 class="display-4">{{ total_profiles }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Export Formats</h5>
+                    <h2 class="display-4">3+</h2>
+                    <small>CSV, Excel, PDF</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Recent Exports</h5>
+                    <h2 class="display-4">{{ export_history|length }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>📊 Export Options</h4>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{% url 'export_csv' %}" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Category Filter</label>
+                            <select name="category" class="form-select">
+                                <option value="all">All Categories</option>
+                                <option value="recruiter">Recruiter</option>
+                                <option value="hr">HR</option>
+                                <option value="backend_dev">Backend Developer</option>
+                                <option value="frontend_dev">Frontend Developer</option>
+                                <option value="fullstack_dev">Fullstack Developer</option>
+                                <option value="manager">Manager</option>
+                                <option value="ceo">CEO</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Location Filter</label>
+                            <input type="text" name="location" class="form-control" placeholder="e.g., New York">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Search by Name</label>
+                            <input type="text" name="search" class="form-control" placeholder="Search profiles...">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div class="d-grid gap-2">
+                                <button type="submit" name="format" value="csv" class="btn btn-success">📄 Export CSV</button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <a href="{% url 'export_excel' %}" class="btn btn-primary w-100">
+                                📊 Export Excel (XLSX)
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{% url 'export_pdf' %}" class="btn btn-danger w-100">
+                                📑 Export PDF
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="{% url 'export_dashboard' %}" class="btn btn-secondary w-100">
+                                🔄 Reset Filters
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export History -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>📜 Recent Export History</h4>
+                </div>
+                <div class="card-body">
+                    {% if export_history %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Format</th>
+                                    <th>Records</th>
+                                    <th>File Name</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for export in export_history %}
+                                <tr>
+                                    <td>{{ export.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if export.export_format == 'csv' %}success{% elif export.export_format == 'excel' %}primary{% else %}danger{% endif %}">
+                                            {{ export.export_format|upper }}
+                                        </span>
+                                    </td>
+                                    <td>{{ export.record_count }}</td>
+                                    <td>{{ export.file_name }}</td>
+                                    <td>
+                                        <a href="{% url 'download_export' export.id %}" class="btn btn-sm btn-secondary">
+                                            Download
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info">
+                        No exports yet. Use the export options above to create your first export.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
